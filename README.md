@@ -9,19 +9,19 @@ But this one... is in C#!
 Eventually I hope to wrap this as a Unity plugin so others can generate music
 on the fly, but first things first.
 
-Currently, this makes use of the [tebjan/Sanford.Multimedia.Midi] project.
+Currently, this makes use of UnitySynth, found here:
+http://forum.unity3d.com/threads/unitysynth-full-xplatform-midi-synth.130104/
 
 For this to work in Unity, PlayerSettings>Other Settings>Api Compatibility Level
 must be set to .NET 2.0, as opposed to .NET 2.0 Subset.
 
-I would also recommend excluding the Sanford.Multimedia.Midi.UI folder entirely
-when you import to Unity.
-
 MIT License
 
 Credits:
-https://github.com/tebjan/Sanford.Multimedia.Midi
+http://forum.unity3d.com/threads/unitysynth-full-xplatform-midi-synth.130104/
+I believe that UnitySynth is itself MIT License, but have so far not been able
+to confirm.
 
 And via that, further credits:
-http://www.codeproject.com/Articles/6228/C-MIDI-Toolkit
-https://code.google.com/p/vsticks/
+http://csharpsynthproject.codeplex.com/license
+
