@@ -32,7 +32,7 @@ public class UnitySynthTest : MonoBehaviour
 	void Awake ()
 	{
 		midiStreamSynthesizer = new StreamSynthesizer (44100, 2, bufferSize, 40);
-		sampleBuffer = new float[midiStreamSynthesizer.BufferSize];		
+		sampleBuffer = new float[midiStreamSynthesizer.BufferSize];
 		
 		midiStreamSynthesizer.LoadBank (bankFilePath);
 		
