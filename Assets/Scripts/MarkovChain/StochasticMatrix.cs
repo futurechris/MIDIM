@@ -24,7 +24,7 @@ public class StochasticMatrix {
 
 	public StochasticMatrix(int numStates)
 	{
-		probMatrix = new float[numStates][numStates];
+		probMatrix = new float[numStates, numStates];
 		normalized = true;
 	}
 
@@ -55,7 +55,7 @@ public class StochasticMatrix {
 				probMatrix[row,col] /= sum;
 				secondSum += probMatrix[row, col];
 			}
-			probMatrix[row, colBound-1] += (1.0-secondSum); // maybe solve float precision error? :)
+			probMatrix[row, colBound-1] += (1.0f-secondSum); // maybe solve float precision error? :)
 		}
 		normalized = true;
 	}
