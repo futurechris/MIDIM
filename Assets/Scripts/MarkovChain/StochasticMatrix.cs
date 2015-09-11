@@ -1,62 +1,90 @@
 ﻿using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using System.Text;
 
 public class StochasticMatrix {
 
 	////////////////////////////////
 	#region Bookkeeping
 
-	// right stochastic matrix, so rows add to 1.0
-	// probMatrix[row][col]
-	private float[,] probMatrix;
+	// maps from a :-delimited string of past notes to a list
+	// of observed frequencies for following notes
+	// Size of this list is 1+numToStates (number of output options)
+	// index numToStates is used to hold the sum,
+	// all other indices are simply counts of how many times the 
+	// from-note sequence was followed by that index.
+	// Pretty sparse but nesting Dictionaries feels like overkill.
+	private Dictionary<string,List<float>> data;
 
-	// once a change has been made, the matrix rows are unlikely
-	// to still sum to 1. this keeps track of that, and is used
-	// to ensure normalization occurs before any requests are served
-	//
-	// obviously you may want to make that happen manually - normalization
-	// order matters, and can be expensive!
-	private bool normalized = false;
+	private int numOutputStates = 0;
+
+	private StringBuilder builder = new StringBuilder();
 
 	#endregion Bookkeeping
 	////////////////////////////////
 
-	public StochasticMatrix(int numStates)
+	public StochasticMatrix(int numToStates)
 	{
-		probMatrix = new float[numStates, numStates];
-		normalized = true;
+		data = new Dictionary<string, List<float>>();
+		numOutputStates = numToStates;
 	}
 
-	public void setProbability(int fromState, int toState, float newProbability)
+	public void incrementTransition(List<int> fromList, int toState, float incrementBy)
 	{
-		normalized = false;
-		probMatrix[fromState, toState] = newProbability;
+		List<float> toList;
+
+		string fromString = getPastString(fromList);
+
+		if(! data.TryGetValue(fromString, out toList))
+		{
+			toList = new List<float>();
+			for(int i=0; i<numOutputStates+1; i++)
+			{
+				toList.Add(0.0f);
+			}
+		}
+		toList[toState] += incrementBy;
+		toList[toList.Count-1] += incrementBy;
 	}
 
-	public void normalizeRows()
+	// Returning -1 feels bad, here. Probably better to throw some exceptiony thing.
+	public int getSampleNote(List<int> fromList)
 	{
-		int rowBound = probMatrix.GetUpperBound(0);
-		int colBound = probMatrix.GetUpperBound(1);
-		for(int row=0; row<rowBound; row++)
+		List<float> toList;
+
+		string fromString = getPastString(fromList);
+
+		if(data.TryGetValue(fromString, out toList))
 		{
 			float sum = 0.0f;
-			float secondSum = 0.0f;
-			for(int col=0; col<colBound; col++)
+			float randVal = Random.Range(0, toList[toList.Count-1]);
+			for(int i=0; i<toList.Count-1; i++)
 			{
-				sum += probMatrix[row,col];
+				sum += toList[i];
+				if(randVal < sum)
+				{
+					return i;
+				}
 			}
-			if(sum == 1.0f)
-			{
-				continue;
-			}
-			for(int col=0; col<colBound; col++)
-			{
-				probMatrix[row,col] /= sum;
-				secondSum += probMatrix[row, col];
-			}
-			probMatrix[row, colBound-1] += (1.0f-secondSum); // maybe solve float precision error? :)
 		}
-		normalized = true;
+
+		return -1;
+	}
+
+	// Produce a string like 37:60:59:22s
+	private string getPastString(List<int> pastStates)
+	{
+		builder.Remove(0, builder.Length);
+		if(pastStates.Count == 0)
+		{
+			return "";
+		}
+		builder.Append(pastStates[0].ToString());
+		for(int i=1; i<pastStates.Count; i++)
+		{
+			builder.Append(":"+pastStates[i]);
+		}
+		return builder.ToString();
 	}
 }
