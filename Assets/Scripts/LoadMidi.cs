@@ -41,8 +41,11 @@ public class LoadMidi : MonoBehaviour {
 	int getOneCount = 0;
 	List<float[]> dataSequence = new List<float[]>();
 
+	// first note is a hack for now to bootstrap the generators
+	private List<int> firstNote = new List<int>();
+	private List<int> lastLastNote = new List<int>();
 	private List<int> lastNote = new List<int>();
-	private List<List<List<float>>> markov = new List<List<List<float>>>();
+	private List<StochasticMatrix> markov = new List<StochasticMatrix>();
 
 	void Awake()
 	{
@@ -61,7 +64,7 @@ public class LoadMidi : MonoBehaviour {
 		midiSequencer.NoteOnEvent += new MidiSequencer.NoteOnEventHandler (MidiNoteOnHandler);
 		midiSequencer.NoteOffEvent += new MidiSequencer.NoteOffEventHandler (MidiNoteOffHandler);
 
-		initializeMatrix(128,128,16);
+		initializeMatrix(16, 128*128,128);
 	}
 
 	void Start()
@@ -104,10 +107,6 @@ public class LoadMidi : MonoBehaviour {
 		{
 			generating = !generating;
 		}
-		if(Input.GetKeyDown(KeyCode.N))
-		{
-			normalizeMatrices();
-		}
 
 		if(Input.GetKeyDown(KeyCode.BackQuote))
 		{
@@ -130,8 +129,12 @@ public class LoadMidi : MonoBehaviour {
 			}
 			if(Input.GetKeyDown(key.ToString()))
 			{
-				int note = getNote(key, lastNote[key]);
+				int note = getNote(key, lastNote[key], lastLastNote[key]);
 				Debug.Log("Generated: "+note+" on channel "+key);
+				if(note < 0)
+				{
+					continue;
+				}
 				midiStreamSynthesizer.NoteOn(key, note, 127, 0);
 				lastNote[key] = note;
 			}
@@ -139,10 +142,13 @@ public class LoadMidi : MonoBehaviour {
 
 		if(Input.GetKeyDown(KeyCode.G))
 		{
-			int note = getNote(1, lastNote[1]);
+			int note = getNote(1, lastNote[1], lastLastNote[1]);
 			Debug.Log("Generated: "+note+" on channel 1");
-			midiStreamSynthesizer.NoteOn(1, note, 127, 0);
-			lastNote[1] = note;
+			if(note >= 0)
+			{
+				midiStreamSynthesizer.NoteOn(1, note, 127, 0);
+				lastNote[1] = note;
+			}
 		}
 		if(Input.GetKeyUp(KeyCode.G))
 		{
@@ -256,74 +262,55 @@ public class LoadMidi : MonoBehaviour {
 	////////////////////////////////////////////////////////////////////////////////////////
 	#region Markov Junk
 
-	private void initializeMatrix(int fromCount, int toCount, int channels)
+	private void initializeMatrix(int channels, int fromCount, int toCount)
 	{
+		firstNote = new List<int>();
+		lastLastNote = new List<int>();
 		lastNote = new List<int>();
 
-		markov = new List<List<List<float>>>();
+		markov = new List<StochasticMatrix>();
 		for(int chan=0; chan<channels; chan++)
 		{
+			firstNote.Add(-1);
+			lastLastNote.Add(-1);
 			lastNote.Add(-1);
-			markov.Add(new List<List<float>>());
-			for(int source=0; source<fromCount; source++)
-			{
-				markov[chan].Add(new List<float>());
-				for(int dest=0; dest<toCount; dest++)
-				{
-					markov[chan][source].Add(0.0f);
-				}
-			}
-		}
-	}
 
-	// rows should sum to 1
-	private void normalizeMatrices()
-	{
-		for(int chan=0; chan<markov.Count; chan++)
-		{
-			for(int source=0; source<markov[chan].Count; source++)
-			{
-				float sum = 0.0f;
-				for(int dest=0; dest<markov[chan][source].Count; dest++)
-				{
-					sum += markov[chan][source][dest];
-				}
-				// I imagine there's a precision error here, but I don't think it's high-impact enough to futz with yet.
-				for(int dest=0; dest<markov[chan][source].Count; dest++)
-				{
-					markov[chan][source][dest] /= sum;
-				}
-			}
+			markov.Add(new StochasticMatrix(toCount));
 		}
 	}
 
 	// For now doesn't use velocity or duration, only single previous state
 	private void recordNote(int channel, int note, int velocity, float duration)
 	{
-		if(lastNote[channel] >= 0)
+		List<int> noteHistory = new List<int>();
+		if(lastLastNote[channel] >= 0 && lastNote[channel] >= 0)
 		{
-			markov[channel][lastNote[channel]][note]++;
+			noteHistory.Add(lastLastNote[channel]);
+			noteHistory.Add(lastNote[channel]);
+			markov[channel].incrementTransition(noteHistory,note,1.0f);
 		}
+		if(firstNote[channel] < 0)
+		{
+			firstNote[channel] = note;
+		}
+		lastLastNote[channel] = lastNote[channel];
 		lastNote[channel] = note;
 	}
 
-	private int getNote(int channel, int lastNote)
+	private int getNote(int channel, int lastNote, int lastLastNote)
 	{
 		float roll = Random.value;
 		float sum = 0.0f;
-		if(lastNote < 0)
+		if(lastNote < 0 || lastLastNote < 0)
 		{
 			return Random.Range(57,88);
 		}
-		for(int dest=0; dest<markov[channel][lastNote].Count; dest++)
-		{
-			sum += markov[channel][lastNote][dest];
-			if(roll < sum)
-			{
-				return dest;
-			}
-		}
-		return 0;
+
+		List<int> history = new List<int>();
+		history.Add(lastLastNote);
+		history.Add(lastNote);
+
+		return markov[channel].getSampleNote(history);
 	}
 
 	#endregion Markov Junk
