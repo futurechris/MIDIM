@@ -32,10 +32,11 @@ public class StochasticMatrix {
 
 	public void incrementTransition(List<int> fromList, int toState, float incrementBy)
 	{
+		Debug.Log("Incrementing: ["+fromList[0]+","+fromList[1]+"]: "+toState);
 		List<float> toList;
 
 		string fromString = getPastString(fromList);
-
+		Debug.Log("Increment: "+fromString);
 		if(! data.TryGetValue(fromString, out toList))
 		{
 			toList = new List<float>();
@@ -46,6 +47,8 @@ public class StochasticMatrix {
 		}
 		toList[toState] += incrementBy;
 		toList[toList.Count-1] += incrementBy;
+
+		data[fromString] = toList;
 	}
 
 	// Returning -1 feels bad, here. Probably better to throw some exceptiony thing.
@@ -54,21 +57,26 @@ public class StochasticMatrix {
 		List<float> toList;
 
 		string fromString = getPastString(fromList);
-
+		Debug.Log("GSN: "+fromString);
 		if(data.TryGetValue(fromString, out toList))
 		{
 			float sum = 0.0f;
 			float randVal = Random.Range(0, toList[toList.Count-1]);
+			Debug.Log("GSN RandVal: "+randVal);
 			for(int i=0; i<toList.Count-1; i++)
 			{
 				sum += toList[i];
+				Debug.Log("GSN @ " + i + " sum: "+sum);
 				if(randVal < sum)
 				{
+					Debug.Log("Sampling: ["+fromList[0]+","+fromList[1]+"] returning "+i);
 					return i;
+
 				}
 			}
 		}
 
+		Debug.Log("Sampling: ["+fromList[0]+","+fromList[1]+"] returning -1");
 		return -1;
 	}
 

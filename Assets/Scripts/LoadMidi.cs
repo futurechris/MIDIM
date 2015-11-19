@@ -136,23 +136,9 @@ public class LoadMidi : MonoBehaviour {
 					continue;
 				}
 				midiStreamSynthesizer.NoteOn(key, note, 127, 0);
+				lastLastNote[key] = lastNote[key];
 				lastNote[key] = note;
 			}
-		}
-
-		if(Input.GetKeyDown(KeyCode.G))
-		{
-			int note = getNote(1, lastNote[1], lastLastNote[1]);
-			Debug.Log("Generated: "+note+" on channel 1");
-			if(note >= 0)
-			{
-				midiStreamSynthesizer.NoteOn(1, note, 127, 0);
-				lastNote[1] = note;
-			}
-		}
-		if(Input.GetKeyUp(KeyCode.G))
-		{
-			midiStreamSynthesizer.NoteOff(1, lastNote[1]);
 		}
 	}
 
@@ -239,7 +225,7 @@ public class LoadMidi : MonoBehaviour {
 		// to initialize the chain. Weird.
 //		if(channel==1)
 //		{
-		Debug.Log("MNOnH: c"+channel+" n"+note+" v"+velocity+" DS: "+dataSequence.Count);
+//		Debug.Log("MNOnH: c"+channel+" n"+note+" v"+velocity+" DS: "+dataSequence.Count);
 		minChannel = Mathf.Min(minChannel, channel);
 		maxChannel = Mathf.Max(maxChannel, channel);
 		minNote = Mathf.Min(minNote, note);
